@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script type="text/javascript" src="./js/jquery-3.3.1.min.js"></script>
+</head>
+<body>
+<div style="display:flex; flex-direction: column; align-items: center">
+    <audio src="./or.mp3" controls="controls">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div>
+        <button id="start" class="ui-btn ui-btn-primary" >record</button>
+        <button id="stop" class="ui-btn ui-btn-primary" disabled>stop</button>
+    </div>
+    <div id="audio-container"></div>
+
+    <div>
+        <button id="compare">compare</button>
+    </div>
+    <div id="img-container"></div>
+</div>
+
+<script src="./js/recorder.js"></script>
+<script type="text/javascript" src="./js/jquery-3.3.1.min.js"></script>
+<script>
+
+    window.onload = function () {
+        var compare = document.querySelector('#compare');
+        var start = document.querySelector('#start');
+        var stop = document.querySelector('#stop');
+        var container = document.querySelector('#audio-container');
+        var containerImg = document.querySelector('#img-container');
+        var recorder = new Recorder({
+            sampleRate: 44100,
+            bitRate: 128,
+            success: function () {
+                start.disabled = false;
+            },
+            error: function (msg) {
+                alert(msg);
+            },
+            fix: function (msg) {
+                alert(msg);
+            }
+        });
+
+        compare.addEventListener('click', function () {
+            $.ajax({
+                type: 'GET',
+                url: 'compare',
+                dataType: "json"
+            }).done(function (data) {
+                // print the output from the upload.php script
+                console.log(data);
+                //similarity
+                var pS = document.createElement('p');
+                if (data.similarity>0)
+                {
+                    pS.textContent = 'similarity:' + 'pass..'+data.similarity
+
+                }
+                containerImg.appendChild(pS)
+
+
+                var imgOriginal = document.createElement('img');
+                imgOriginal.src = data.pic_original;
+                var p1 = document.createElement('p');
+                p1.textContent = 'Original wave'
+                containerImg.appendChild(p1)
+                containerImg.appendChild(imgOriginal)
+                var imgAudio = document.createElement('img');
+                imgAudio.src = data.pic_audio;
+                var p2 = document.createElement('p');
+                p2.textContent = 'Record audio wave'
+                containerImg.appendChild(p2)
+                containerImg.appendChild(imgAudio)
+
+            });
+        });
+
+        start.addEventListener('click', function () {
+            this.disabled = true;
+            stop.disabled = false;
+            var audio = document.querySelectorAll('audio');
+            for (var i = 0; i < audio.length; i++) {
+                if (!audio[i].paused) {
+                    audio[i].pause();
+                }
+            }
+            recorder.start();
+        });
+        stop.addEventListener('click', function () {
+            this.disabled = true;
+            start.disabled = false;
+            recorder.stop();
+            recorder.getBlob(function (blob) {
+                var audio = document.createElement('audio');
+                audio.src = URL.createObjectURL(blob);
+
+//                alert(audio.src)
+                sendAudio(blob)
+                audio.controls = true;
+                container.appendChild(audio);
+            });
+        });
+
+    };
+
+    function sendCompare() {
+        $.ajax({
+            type: 'GET',
+            url: 'compare',
+        }).done(function (data) {
+            // print the output from the upload.php script
+            console.log(data);
+        });
+    }
+
+    function sendAudio(blob) {
+        var reader = new FileReader();
+        // this function is triggered once a call to readAsDataURL returns
+
+        reader.onload = function (event) {
+//            debugger;
+            var fd = new FormData();
+            fd.append('fname', 'audio.mp3');
+            fd.append('data', event.target.result);
+            $.ajax({
+                type: 'POST',
+                url: 'upload',
+                data: fd,
+                processData: false,
+                contentType: false
+            }).done(function (data) {
+                // print the output from the upload.php script
+                console.log(data);
+            });
+        };
+        // trigger the read from the reader...
+        reader.readAsDataURL(blob);
+
+
+    }
+</script>
+
+
+</body>
+</html>
